@@ -120,6 +120,7 @@ class EmbeddingNet(nn.Module):
     def forward(self, x):
         x = self.emb_net(x)
         
+        # The following returns a normalized vector with a magnitude (L2 norm) of 1
         return F.normalize(x, p= 2, dim= 1)
 
 
@@ -148,11 +149,12 @@ def train(train_dataloader, model, device, loss_fn, optim):
         zAnc, zPos, zNeg = model(xAnc, xPos, xNeg)
         loss = loss_fn(zAnc, zPos, zNeg)
 
+        # The learning step
         optim.zero_grad()
         loss.backward()
         optim.step()
 
-        if (batch%50) == 0:
+        if (batch%50) == 0:             # Prints every 50 batches
             train_loss, current = loss.item(), batch * batch_size + len(xAnc)
             print(f"loss: {train_loss:>7f}  [{current:>5d}/{dataset_size:>5d}]")
 
@@ -160,7 +162,7 @@ def train(train_dataloader, model, device, loss_fn, optim):
 
 def validate(val_dataloader, model, device):
 
-    margin = 0.1
+    margin = 0.2
     total_correct = 0
     dataset_size = len(val_dataloader.dataset)
 
@@ -242,10 +244,10 @@ if __name__ == '__main__':
         pin_memory= True
     )
 
-    epochs = 2
+    epochs = 4
 
     model = SiameseNet(EmbeddingNet()).to(device)
-    loss_func = nn.TripletMarginLoss(margin= 0.05)
+    loss_func = nn.TripletMarginLoss(margin= 1.0, p =2)
     optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 
     
@@ -256,7 +258,7 @@ if __name__ == '__main__':
         train(triplet_train_dataloader, model, device, loss_func, optimizer)
         validate(val_dataloader, model, device)
 
-    torch.save(model.state_dict(), 'weights/SiamNet_weights.pth')
+    torch.save(model.state_dict(), 'weights/SiamNet_weights_3.pth')
     print("Model saved!")
 
 
