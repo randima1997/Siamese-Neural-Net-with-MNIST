@@ -94,6 +94,7 @@ class SiameseDatasetTrip(Dataset):
         idxNeg = random.choice(self.labels_to_indices[label2])                      # Randomly chooses an index from chosen label
         xNeg = self.data[idxNeg]
 
+        # The Model requires the input to be in a specific form. The following includes another dimension turns data into float
         return xAnc.float().unsqueeze(0), xPos.float().unsqueeze(0),xNeg.float().unsqueeze(0)
 
 
@@ -128,7 +129,7 @@ class SiameseNet(nn.Module):
         self.emb_net = emb_net
 
     def forward(self, x1, x2, x3 = torch.zeros(2, 1, 28, 28)):
-        x3 = x3.to(x1.device)
+        x3 = x3.to(x1.device)       # This makes sure that x3 is in the same device as x1. Dummy x3 made in CPU
         z1 = self.emb_net(x1)
         z2 = self.emb_net(x2)
         z3 = self.emb_net(x3)
@@ -184,10 +185,6 @@ def validate(val_dataloader, model, device):
 
 
 
-
-
-
-
 if __name__ == '__main__':
         
     device = (
@@ -217,8 +214,14 @@ if __name__ == '__main__':
     train_set_size = int(0.9*len(mnist_dataset))
     val_set_size = len(mnist_dataset) - train_set_size
 
+    # Splits the MNIST dataset into train and val 
     train_set, val_set = random_split(mnist_dataset, [train_set_size, val_set_size])
 
+    """
+    Turns each MNIST subset into the requisite Siamese net datasets. train_set is a dataset containing 3-tuples
+    with Anchor, Positive and Negative. val_set is a dataset containing 3-tuples, each with two randomly chosen examples
+    and a 3rd element which is a label specifying whether a two elements are similar or not. 
+    """
     train_set = SiameseDatasetTrip(train_set.dataset.data[train_set.indices], train_set.dataset.targets[train_set.indices].tolist())
     val_set = SiameseDataset(val_set.dataset.data[val_set.indices], val_set.dataset.targets[val_set.indices].tolist())
 
@@ -253,15 +256,8 @@ if __name__ == '__main__':
         train(triplet_train_dataloader, model, device, loss_func, optimizer)
         validate(val_dataloader, model, device)
 
-    torch.save(model.state_dict(), 'weights/Resnet34_weights.pth')
+    torch.save(model.state_dict(), 'weights/SiamNet_weights.pth')
     print("Model saved!")
 
 
 
-
-# #print(triplet_dataset[34][2].shape)
-
-# ind = 1011
-# plot_example2(triplet_dataset[ind][0])
-# plot_example2(triplet_dataset[ind][1])
-# plot_example2(triplet_dataset[ind][2])
